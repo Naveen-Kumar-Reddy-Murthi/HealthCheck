@@ -1,0 +1,24 @@
+#%RAML 0.8
+---
+title: Resource Health API
+version: v1
+baseUri: https://atc-healthchecker.cloudhub.io/api/rest
+protocols: [HTTP,HTTPS]
+mediaType: application/json
+
+/health:
+  post:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              { "db":[{"db1":"GOOD"}],"sftp":[{"sftp":"BAD"}] }
+/healthNew:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              { "db":[{"db1":"GOOD"}],"sftp":[{"sftp":"BAD"}] }

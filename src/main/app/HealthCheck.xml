@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+    <flow name="HealthCheckLogic">
+        <byte-array-to-object-transformer returnClass="java.lang.String" doc:name="Byte Array to Object"/>
+        <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
+        <set-variable variableName="serverList" value="#[new java.util.ArrayList()]" doc:name="serverList"/>
+        <set-variable variableName="health" value="#['GOOD']" doc:name="health"/>
+        <foreach collection="#[payload.entrySet()]" doc:name="For Each">
+            <set-variable variableName="conType" value="#[payload.getKey()]" doc:name="conType"/>
+                    <enricher target="variable:paramMap" doc:name="Message Enricher">
+                        <expression-transformer returnClass="java.util.Map" expression="#[payload.getValue()]" doc:name="Expression"/>
+                    </enricher>
+            <logger message="conType: #[conType] " level="INFO" doc:name="Logger"/>
+            <component class="com.atc.util.HealthCheckUtil" doc:name="Java"/>
+                    <enricher target="variable:success" doc:name="Message Enricher">
+                        <expression-transformer expression="#[serverList.add(flowVars.response)]" doc:name="Expression"/>
+                    </enricher>
+               
+               
+               
+        </foreach>
+        <logger message="#[serverList]" level="INFO" doc:name="Logger"/>
+        <expression-component doc:name="Expression"><![CDATA[import com.atc.response.*;
+
+Response response = new Response();
+response.setHealth(flowVars.health);
+response.setHostList(flowVars.serverList);
+
+flowVars.response= response;]]></expression-component>
+        <set-payload value="#[response]" mimeType="application/json" doc:name="Set Payload"/>
+        <set-property propertyName="#['Content-Type']" value="#['application/json']" mimeType="application/json" doc:name="Content-Type"/>
+        <json:object-to-json-transformer mimeType="application/json" doc:name="Object to JSON"/>
+    </flow>
+    <flow name="HealthCheckLogicNew1">
+        <flow-ref name="getServersToBeChecked" doc:name="getServersToBeChecked"/>
+        <set-variable variableName="serverList" value="#[new java.util.ArrayList()]" doc:name="serverList"/>
+        <set-variable variableName="health" value="#['GOOD']" doc:name="health"/>
+        <set-variable variableName="dBMap" value="#[new java.util.HashMap()]" doc:name="dBMap"/>
+        <set-variable variableName="sftpMap" value="#[new java.util.HashMap()]" doc:name="Variable"/>
+        <foreach collection="#[serversMap.entrySet()]" doc:name="For Each">
+            <set-variable variableName="conType" value="#[payload.getKey()]" doc:name="conType"/>
+            <enricher target="variable:paramMap" doc:name="Message Enricher">
+                <expression-transformer returnClass="java.util.Map" expression="#[payload.getValue()]" doc:name="Expression"/>
+            </enricher>
+            <logger message="#[conType]" level="INFO" doc:name="Logger"/>
+            <component class="com.atc.util.HealthCheckUtil" doc:name="Java"/>
+            <enricher target="variable:success" doc:name="Message Enricher">
+                <expression-transformer expression="#[serverList.add(flowVars.response)]" doc:name="Expression"/>
+            </enricher>
+        </foreach>
+        <expression-component doc:name="Expression"><![CDATA[import com.atc.response.*;
+
+Response response = new Response();
+response.setHealth(flowVars.health);
+response.setHostList(flowVars.serverList);
+
+flowVars.response= response;
+payload=response;
+
+]]></expression-component>
+        <scripting:component doc:name="Groovy">
+            <scripting:script engine="Groovy"><![CDATA[import groovy.json.*
+ new JsonBuilder(payload).toPrettyString()]]></scripting:script>
+        </scripting:component>
+    </flow>
+    <flow name="HealthCheckLogicNew">
+        <flow-ref name="getServersToBeChecked" doc:name="getServersToBeChecked"/>
+        <set-variable variableName="serverList" value="#[new java.util.ArrayList()]" doc:name="serverList"/>
+        <set-variable variableName="health" value="#['GOOD']" doc:name="health"/>
+        <foreach collection="#[serversMap.entrySet()]" doc:name="For Each">
+            <set-variable variableName="conType" value="#[payload.getKey()]" doc:name="conType"/>
+            <enricher target="variable:paramMap" doc:name="Message Enricher">
+                <expression-transformer returnClass="java.util.Map" expression="#[payload.getValue()]" doc:name="Expression"/>
+            </enricher>
+            <logger message="#[conType]" level="INFO" doc:name="Logger"/>
+            <component class="com.atc.util.HealthCheckUtil" doc:name="Java"/>
+            <enricher target="variable:success" doc:name="Message Enricher">
+                <expression-transformer expression="#[serverList.add(flowVars.response)]" doc:name="Expression"/>
+            </enricher>
+        </foreach>
+        <expression-component doc:name="Expression"><![CDATA[import com.atc.response.*;
+
+Response response = new Response();
+response.setHealth(flowVars.health);
+response.setHostList(flowVars.serverList);
+
+flowVars.response= response;
+payload=response;
+
+]]></expression-component>
+        <scripting:component doc:name="Groovy">
+            <scripting:script engine="Groovy"><![CDATA[import groovy.json.*
+ new JsonBuilder(payload).toPrettyString()]]></scripting:script>
+        </scripting:component>
+    </flow>
+    
+    <flow name="getServersToBeChecked">
+        <set-payload value="${health.checks}" doc:name="Set Payload"/>
+        <set-variable variableName="checkList" value="#[payload.split(',')]" doc:name="checkList"/>
+        <set-variable variableName="serversMap" value="#[new java.util.HashMap()]" doc:name="serversMap"/>
+        <foreach collection="#[checkList]" doc:name="For Each">
+            <set-variable variableName="serverName" value="#[payload]" doc:name="serverName"/>
+            <flow-ref name="getServerInfo" doc:name="getServerInfo"/>
+        </foreach>
+        <logger message="serversMap: #[serversMap]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <sub-flow name="getServerInfo">
+        <set-payload value="#[dw(&quot;p(flowVars.serverName)&quot;)]" doc:name="Set Payload" />
+        <set-variable variableName="password" value="#[dw(&quot;flowVars.serverName&quot;)].password" doc:name="password"/>
+        <set-variable variableName="passwordValue" value="#[dw(&quot;p(flowVars.password)&quot;)]" doc:name="passwordValue"/>
+        <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
+        <expression-component doc:name="Expression"><![CDATA[import java.util.HashMap;
+
+HashMap map = payload;
+map.put("password",flowVars.passwordValue);
+flowVars.serversMap.put(flowVars.serverName,map);]]></expression-component>
+    </sub-flow>
+    
+</mule>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+    <http:listener-config name="HealthCheck-httpListenerConfig" host="0.0.0.0" port="${http.port}" doc:name="HTTP Listener Configuration" />
+    <apikit:config name="HealthCheck-config" raml="HealthCheck.raml" consoleEnabled="false" doc:name="Router" keepRamlBaseUri="false">
+        <apikit:flow-mapping resource="/health" action="post" flow-ref="HealthCheckLogic"/>
+        <apikit:flow-mapping resource="/healthNew" action="get" content-type="application/json" flow-ref="HealthCheckLogicNew"/>
+
+    </apikit:config>
+    <flow name="EndpointFlow">
+        <http:listener config-ref="HealthCheck-httpListenerConfig" path="/health" doc:name="HTTP"/>
+        <flow-ref name="HealthCheckLogicNew" doc:name="Flow Reference"/>
+    </flow>
+    <flow name="HealthCheck-main">
+        <http:listener config-ref="HealthCheck-httpListenerConfig" path="/api/rest/*" doc:name="HTTP" />
+        <apikit:router config-ref="HealthCheck-config" doc:name="APIkit Router" />
+        <exception-strategy ref="HealthCheck-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy" />
+    </flow>
+    <flow name="HealthCheck-console">
+        <http:listener config-ref="HealthCheck-httpListenerConfig" path="/console/*" doc:name="HTTP" />
+        <apikit:console config-ref="HealthCheck-config" doc:name="APIkit Console" />
+    </flow>
+    <flow name="post:/health:HealthCheck-config">
+        <set-payload value="{ &quot;db&quot;:[{&quot;db1&quot;:&quot;GOOD&quot;}],&quot;sftp&quot;:[{&quot;sftp&quot;:&quot;BAD&quot;}] }" doc:name="Set Payload" />
+    </flow>
+    <flow name="get:/healthNew:HealthCheck-config">
+        <set-payload value="{ &quot;db&quot;:[{&quot;db1&quot;:&quot;GOOD&quot;}],&quot;sftp&quot;:[{&quot;sftp&quot;:&quot;BAD&quot;}] }" doc:name="Set Payload"/>
+    </flow>
+    <apikit:mapping-exception-strategy name="HealthCheck-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>
